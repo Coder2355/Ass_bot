@@ -2,7 +2,7 @@ from pyrogram import Client, filters
 from PIL import Image
 import pytesseract
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, filters  # Updated filters import
 from config import Config
 
 # Tesseract configuration

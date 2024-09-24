@@ -4,16 +4,14 @@ import pytesseract
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from config import Config
-import pytesseract
+
+# Tesseract configuration
+pytesseract.pytesseract.tesseract_cmd = Config.TESSERACT_CMD
 
 # Initialize Pyrogram Client
 app = Client("assignment_bot")
 
-
-# Initialize Tesseract
-pytesseract.pytesseract.tesseract_cmd = Config.TESSERACT_CMD
-
-# Initialize your bot using the token from config
+# Set up Telegram bot
 TOKEN = Config.BOT_TOKEN
 updater = Updater(TOKEN, use_context=True)
 dispatcher = updater.dispatcher
@@ -21,9 +19,17 @@ dispatcher = updater.dispatcher
 # Store temporary user data
 user_data = {}
 
+# Start command
+def start(update: Update, context):
+    """Send a welcome message when the /start command is issued."""
+    update.message.reply_text(Config.START_MESSAGE)
+
 # Analyze handwriting from photo
 @app.on_message(filters.photo)
 async def analyze_handwriting(client, message):
+    # Notify the user that their request is being processed
+    await message.reply_text(Config.STATUS_MESSAGE)
+
     # Download the photo
     photo_path = await message.download()
 
@@ -31,7 +37,7 @@ async def analyze_handwriting(client, message):
     image = Image.open(photo_path)
     handwriting_text = pytesseract.image_to_string(image)
 
-    # Set handwriting in user data and ask for paragraph
+    # Set handwriting in user data and ask for a paragraph
     user_id = message.from_user.id
     user_data[user_id] = {"handwriting": handwriting_text}
     
@@ -115,6 +121,7 @@ def handle_color(update: Update, context):
     query.message.reply_text(output)
 
 # Register callback query handlers
+dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CallbackQueryHandler(handle_language, pattern='^language_'))
 dispatcher.add_handler(CallbackQueryHandler(handle_sheet_size, pattern='^sheet_'))
 dispatcher.add_handler(CallbackQueryHandler(handle_color, pattern='^color_'))

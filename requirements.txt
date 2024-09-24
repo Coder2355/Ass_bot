@@ -1,4 +1,5 @@
 pyrogram==2.0.106
+tgcrypto
 pillow==10.0.0
 python-telegram-bot==20.4
 pytesseract==0.3.10

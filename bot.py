@@ -9,7 +9,7 @@ from config import Config
 pytesseract.pytesseract.tesseract_cmd = Config.TESSERACT_CMD
 
 # Initialize Pyrogram Client with API ID and API hash
-app = Client("assignment_bot", api_id=Config.API_ID, api_hash=Config.API_HASH)
+app = Client("assignment_bot", api_id=Config.API_ID, api_hash=Config.API_HASH, bot_token=Config.BOT_TOKEN)
 
 # Set up Telegram bot with Application class (v20+)
 application = Application.builder().token(Config.BOT_TOKEN).build()

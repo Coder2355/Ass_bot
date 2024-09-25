@@ -17,7 +17,7 @@ async def start(client, message):
     await message.reply("Welcome to the Assignment Writer Bot! Please send me a paragraph to get started.")
 
 # Paragraph handler
-@app.on_message(filters.text & ~filters.command)
+@app.on_message(filters.text & filters.command)
 async def receive_paragraph(client, message):
     user_id = message.from_user.id
     paragraph = message.text

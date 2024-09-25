@@ -2,6 +2,7 @@ import os
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from PIL import Image, ImageDraw, ImageFont
+import textwrap
 import config
 
 app = Client("AssignmentBot", api_id=config.API_ID, api_hash=config.API_HASH, bot_token=config.BOT_TOKEN)
@@ -97,22 +98,27 @@ async def process_assignment(client, message, user_id):
     image = Image.new("RGB", image_size, "white")
     draw = ImageDraw.Draw(image)
 
-    # Set font style
+    # Set Tamil font if the paragraph contains Tamil characters
     if font_style == "default":
-        font = ImageFont.load_default()
+        # Use a Tamil-supported font
+        tamil_font_path = "/mnt/data/file-SmkeSDoojp3BKCs9MgrPOqrE"  # Path to the uploaded Tamil font file
+        font = ImageFont.truetype(tamil_font_path, 48)  # Adjust font size as needed
     elif font_style == "handwriting":
         font_path = user_data[user_id]["handwriting_image"]
         font = ImageFont.truetype(font_path, 30)  # Adjust font size as needed
-    
+
     # Set text color
     color_code = "blue" if color == "Blue" else "black"
+
+    # Word wrap the paragraph to fit the page
+    max_width = image_size[0] - 100  # Keep margin
+    wrapped_text = textwrap.fill(paragraph, width=80)  # Adjust width to fit A4
 
     # Write the paragraph to the image
     margin = 50
     offset = 50
-    for line in paragraph.split('\n'):
+    for line in wrapped_text.split('\n'):
         draw.text((margin, offset), line, font=font, fill=color_code)
-        # Use font.getbbox instead of getsize
         bbox = draw.textbbox((margin, offset), line, font=font)
         offset += bbox[3] - bbox[1] + 15  # Line spacing
 
@@ -122,7 +128,7 @@ async def process_assignment(client, message, user_id):
 
     # Send the image
     await message.reply_photo(photo=output_image_path, caption="Here is your assignment!")
-    
+
     # Clean up by removing the saved image and font
     if os.path.exists(output_image_path):
         os.remove(output_image_path)

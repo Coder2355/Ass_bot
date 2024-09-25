@@ -43,7 +43,7 @@ async def analyze_handwriting(client, message):
     await message.reply_text("I've analyzed your handwriting. Now please send the paragraph you'd like to format.")
 
 # Handle paragraph and display language options
-@app.on_message(filters.text)
+@app.on_message(filters.Text)
 async def handle_paragraph(client, message):
     user_id = message.from_user.id
     if user_id in user_data:

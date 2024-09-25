@@ -100,9 +100,13 @@ async def process_assignment(client, message, user_id):
 
     # Set Tamil font if the paragraph contains Tamil characters
     if font_style == "default":
-        # Use a Tamil-supported font
-        tamil_font_path = "/mnt/data/file-SmkeSDoojp3BKCs9MgrPOqrE"  # Path to the uploaded Tamil font file
-        font = ImageFont.truetype(tamil_font_path, 48)  # Adjust font size as needed
+        # **Make sure the correct path to the Tamil font is used**
+        tamil_font_path = "/mnt/data/file-SmkeSDoojp3BKCs9MgrPOqrE"  # Adjust if needed
+        try:
+            font = ImageFont.truetype(tamil_font_path, 48)  # Adjust font size as needed
+        except OSError:
+            await message.reply("Error loading the Tamil font. Make sure the font file is accessible.")
+            return
     elif font_style == "handwriting":
         font_path = user_data[user_id]["handwriting_image"]
         font = ImageFont.truetype(font_path, 30)  # Adjust font size as needed

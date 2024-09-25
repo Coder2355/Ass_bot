@@ -19,7 +19,7 @@ async def start(client, message):
     )
 
 # Process the paragraph
-@app.on_message(filters.text & ~filters.command)
+@app.on_message(filters.text & ~filters.command(["start"]))  # Ensure we process only text messages that are not commands
 async def receive_paragraph(client, message):
     user_id = message.from_user.id
     user_data[user_id] = {"paragraph": message.text}

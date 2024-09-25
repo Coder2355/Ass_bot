@@ -3,3 +3,4 @@ tgcrypto
 pillow==10.0.0
 python-telegram-bot==20.4
 pytesseract==0.3.10
+textwrap3==0.9.2

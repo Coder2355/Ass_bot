@@ -23,7 +23,7 @@ async def start(update: Update, context):
     await update.message.reply_text(Config.START_MESSAGE)
 
 # Analyze handwriting from photo
-@app.on_message(filters.Photo)
+@app.on_message(filters._Photo)
 async def analyze_handwriting(client, message):
     # Notify the user that their request is being processed
     await message.reply_text(Config.STATUS_MESSAGE)

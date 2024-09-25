@@ -2,14 +2,14 @@ from pyrogram import Client, filters
 from PIL import Image
 import pytesseract
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters  # Updated filters import
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 from config import Config
 
 # Tesseract configuration
 pytesseract.pytesseract.tesseract_cmd = Config.TESSERACT_CMD
 
-# Initialize Pyrogram Client
-app = Client("assignment_bot")
+# Initialize Pyrogram Client with API ID and API hash
+app = Client("assignment_bot", api_id=Config.API_ID, api_hash=Config.API_HASH)
 
 # Set up Telegram bot with Application class (v20+)
 application = Application.builder().token(Config.BOT_TOKEN).build()
@@ -23,7 +23,7 @@ async def start(update: Update, context):
     await update.message.reply_text(Config.START_MESSAGE)
 
 # Analyze handwriting from photo
-@app.on_message(filters._Photo)
+@app.on_message(filters.photo)
 async def analyze_handwriting(client, message):
     # Notify the user that their request is being processed
     await message.reply_text(Config.STATUS_MESSAGE)
@@ -43,7 +43,7 @@ async def analyze_handwriting(client, message):
     await message.reply_text("I've analyzed your handwriting. Now please send the paragraph you'd like to format.")
 
 # Handle paragraph and display language options
-@app.on_message(filters.Text)
+@app.on_message(filters.text)
 async def handle_paragraph(client, message):
     user_id = message.from_user.id
     if user_id in user_data:

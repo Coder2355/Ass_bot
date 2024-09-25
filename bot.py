@@ -112,7 +112,9 @@ async def process_assignment(client, message, user_id):
     offset = 50
     for line in paragraph.split('\n'):
         draw.text((margin, offset), line, font=font, fill=color_code)
-        offset += font.getsize(line)[1] + 15  # Line spacing
+        # Use font.getbbox instead of getsize
+        bbox = draw.textbbox((margin, offset), line, font=font)
+        offset += bbox[3] - bbox[1] + 15  # Line spacing
 
     # Save the image as a file
     output_image_path = f"{user_id}_assignment.png"

@@ -1,123 +1,151 @@
-import asyncio
+import os
+from PIL import Image, ImageDraw, ImageFont
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+# Define your bot token and other configurations in config.py
 from config import API_ID, API_HASH, BOT_TOKEN
 
-# Initialize the bot with API credentials from config
-app = Client(
-    "assignment_writer_bot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    bot_token=BOT_TOKEN
-)
+app = Client("assignment_writer_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Dictionary to hold user data for different stages
+# Dictionary to store user data during the process
 user_data = {}
 
-# Start message
+# Start command handler
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    start_text = (
-        "👋 Welcome to the Assignment Writer Bot!\n\n"
-        "📝 Send me the paragraph you want to write, and I'll help you create a customized assignment file. "
-        "You can choose the paper size, ink color, and font style or even upload your handwriting!"
-    )
-    await message.reply_text(start_text)
+    await message.reply("Welcome to the Assignment Writer Bot! Please send me a paragraph to get started.")
 
-# Receive the paragraph and prompt for paper size
-@app.on_message(filters.text & ~filters.command("start"))
-async def handle_paragraph(client, message):
+# Paragraph handler
+@app.on_message(filters.text & ~filters.command)
+async def receive_paragraph(client, message):
     user_id = message.from_user.id
-    user_data[user_id] = {"paragraph": message.text}  # Store the paragraph
+    paragraph = message.text
+    user_data[user_id] = {"paragraph": paragraph}
+    
     # Ask for paper size
-    keyboard = [
-        [InlineKeyboardButton("A4", callback_data="paper_A4"),
-         InlineKeyboardButton("A3", callback_data="paper_A3"),
-         InlineKeyboardButton("Rule", callback_data="paper_rule")]
-    ]
-    await message.reply_text("📄 Choose the paper size:", reply_markup=InlineKeyboardMarkup(keyboard))
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("A4", callback_data="paper_size:A4"),
+         InlineKeyboardButton("A3", callback_data="paper_size:A3"),
+         InlineKeyboardButton("Rule", callback_data="paper_size:Rule")]
+    ])
+    
+    await message.reply("Choose paper size:", reply_markup=keyboard)
 
-# Handle paper size selection
-@app.on_callback_query(filters.regex(r"^paper_"))
-async def handle_paper_selection(client, callback_query):
+# Callback query handler for paper size, color, and font selection
+@app.on_callback_query(filters.regex(r"^paper_size:(.+)"))
+async def paper_size_selected(client, callback_query):
     user_id = callback_query.from_user.id
-    paper_size = callback_query.data.split("_")[1]
-    user_data[user_id]["paper_size"] = paper_size  # Store selected paper size
-    await callback_query.answer(f"Paper size {paper_size} selected.")
-
+    paper_size = callback_query.data.split(":")[1]
+    user_data[user_id]["paper_size"] = paper_size
+    
     # Ask for ink color
-    keyboard = [
-        [InlineKeyboardButton("Blue", callback_data="color_blue"),
-         InlineKeyboardButton("Black", callback_data="color_black")]
-    ]
-    await callback_query.message.reply_text("✍️ Choose the ink color:", reply_markup=InlineKeyboardMarkup(keyboard))
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Blue", callback_data="color:blue"),
+         InlineKeyboardButton("Black", callback_data="color:black")]
+    ])
+    
+    await callback_query.message.reply("Choose ink color:", reply_markup=keyboard)
 
-# Handle color selection
-@app.on_callback_query(filters.regex(r"^color_"))
-async def handle_color_selection(client, callback_query):
+@app.on_callback_query(filters.regex(r"^color:(.+)"))
+async def color_selected(client, callback_query):
     user_id = callback_query.from_user.id
-    color = callback_query.data.split("_")[1]
-    user_data[user_id]["color"] = color  # Store selected color
-    await callback_query.answer(f"Ink color {color} selected.")
+    color = callback_query.data.split(":")[1]
+    user_data[user_id]["color"] = color
+    
+    # Ask for font selection
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Default Font", callback_data="font:default"),
+         InlineKeyboardButton("Upload Handwriting", callback_data="font:handwriting")]
+    ])
+    
+    await callback_query.message.reply("Choose font style:", reply_markup=keyboard)
 
-    # Ask for font style or handwriting upload
-    keyboard = [
-        [InlineKeyboardButton("Default Font", callback_data="font_default"),
-         InlineKeyboardButton("Upload Handwriting", callback_data="font_upload")]
-    ]
-    await callback_query.message.reply_text("🎨 Choose the font style:", reply_markup=InlineKeyboardMarkup(keyboard))
-
-# Handle font style selection or handwriting upload
-@app.on_callback_query(filters.regex(r"^font_"))
-async def handle_font_selection(client, callback_query):
+@app.on_callback_query(filters.regex(r"^font:(.+)"))
+async def font_selected(client, callback_query):
     user_id = callback_query.from_user.id
-    font_choice = callback_query.data.split("_")[1]
-
-    if font_choice == "default":
-        user_data[user_id]["font"] = "default"
-        await callback_query.answer("Default font selected.")
+    font_choice = callback_query.data.split(":")[1]
+    user_data[user_id]["font"] = font_choice
+    
+    # If the user chooses handwriting, ask them to upload a font file
+    if font_choice == "handwriting":
+        await callback_query.message.reply("Please upload your handwriting font file (TTF format).")
+    else:
         await process_assignment(client, callback_query.message, user_id)
-    elif font_choice == "upload":
-        user_data[user_id]["font"] = "handwriting"
-        await callback_query.message.reply_text("📸 Please upload your handwriting as an image.")
 
-# Handle handwriting image upload
-@app.on_message(filters.photo)
-async def handle_handwriting_upload(client, message):
+# Handler for uploaded font file
+@app.on_message(filters.document & filters.user(user_data.keys()))
+async def receive_handwriting(client, message):
     user_id = message.from_user.id
-    if user_id in user_data and user_data[user_id].get("font") == "handwriting":
-        file_path = await message.download()
-        user_data[user_id]["handwriting_image"] = file_path  # Store the file path of handwriting
-        await message.reply_text("Handwriting uploaded successfully.")
+    file = message.document
+    
+    # Ensure the user has selected the handwriting option
+    if user_data.get(user_id, {}).get("font") == "handwriting":
+        font_path = f"{user_id}_handwriting.ttf"
+        await message.download(file_name=font_path)
+        user_data[user_id]["handwriting_image"] = font_path
+        
         await process_assignment(client, message, user_id)
 
-# Process the final assignment and upload the file
+# Process the final assignment and generate an image
 async def process_assignment(client, message, user_id):
     paragraph = user_data[user_id]["paragraph"]
     paper_size = user_data[user_id]["paper_size"]
     color = user_data[user_id]["color"]
-    font = user_data[user_id]["font"]
+    font_choice = user_data[user_id]["font"]
 
-    # Simulate creating the assignment file (customization can be added here)
-    if font == "default":
-        # Generate assignment with default font
-        assignment_file = f"{user_id}_assignment_default_font.txt"
-    elif font == "handwriting":
-        # Use uploaded handwriting image
-        assignment_file = f"{user_id}_assignment_handwriting.txt"
+    # Set up the A4 size (210mm x 297mm) in pixels for 300 DPI
+    width, height = 2480, 3508  # A4 in pixels
+    image = Image.new("RGB", (width, height), color="white")  # Create a white A4 image
+    draw = ImageDraw.Draw(image)
 
-    # Simulating file creation for demo purposes
-    with open(assignment_file, "w") as f:
-        f.write(f"Paper Size: {paper_size}\n")
-        f.write(f"Ink Color: {color}\n")
-        f.write(f"Font Style: {font}\n\n")
-        f.write(paragraph)
+    # Load default font or the uploaded handwriting font
+    if font_choice == "default":
+        try:
+            font = ImageFont.truetype("arial.ttf", 40)  # Default font
+        except IOError:
+            font = ImageFont.load_default()  # Fallback if no TTF is available
+    elif font_choice == "handwriting":
+        font = ImageFont.truetype(user_data[user_id]["handwriting_image"], 40)  # Use uploaded handwriting
 
-    # Upload the generated file to the user
-    await client.send_document(user_id, document=assignment_file, caption="Here is your assignment file!")
+    # Set up text color based on user choice
+    text_color = (0, 0, 255) if color == "blue" else (0, 0, 0)
+
+    # Define text placement on the image
+    margin = 100
+    y_offset = 150
+    max_width = width - 2 * margin  # Ensure text stays within the margins
+
+    # Break text into lines to fit on A4
+    lines = []
+    words = paragraph.split(' ')
+    current_line = ""
+    for word in words:
+        test_line = f"{current_line} {word}".strip()
+        if draw.textsize(test_line, font=font)[0] < max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    lines.append(current_line)
+
+    # Draw text onto the image
+    for line in lines:
+        draw.text((margin, y_offset), line, font=font, fill=text_color)
+        y_offset += draw.textsize(line, font=font)[1] + 10  # Line spacing
+
+    # Save the image to a file
+    image_file = f"{user_id}_assignment.png"
+    image.save(image_file)
+
+    # Upload the image file to the user
+    await client.send_photo(user_id, image_file, caption="Here is your assignment with the chosen settings!")
+
+    # Remove the image file from the local directory
+    os.remove(image_file)
 
     # Clean up user data after the process
     del user_data[user_id]
 
-# Run the bot
-app.run()
+if __name__ == "__main__":
+    app.run()

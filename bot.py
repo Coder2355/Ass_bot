@@ -2,7 +2,7 @@ from pyrogram import Client, filters
 from PIL import Image
 import pytesseract
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, filters  # Updated filters import
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters  # Updated filters import
 from config import Config
 
 # Tesseract configuration
@@ -11,18 +11,16 @@ pytesseract.pytesseract.tesseract_cmd = Config.TESSERACT_CMD
 # Initialize Pyrogram Client
 app = Client("assignment_bot")
 
-# Set up Telegram bot
-TOKEN = Config.BOT_TOKEN
-updater = Updater(TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+# Set up Telegram bot with Application class (v20+)
+application = Application.builder().token(Config.BOT_TOKEN).build()
 
 # Store temporary user data
 user_data = {}
 
 # Start command
-def start(update: Update, context):
+async def start(update: Update, context):
     """Send a welcome message when the /start command is issued."""
-    update.message.reply_text(Config.START_MESSAGE)
+    await update.message.reply_text(Config.START_MESSAGE)
 
 # Analyze handwriting from photo
 @app.on_message(filters.photo)
@@ -60,7 +58,7 @@ async def handle_paragraph(client, message):
         await message.reply_text("Choose a language:", reply_markup=reply_markup)
 
 # Handle language selection and display sheet options
-def handle_language(update: Update, context):
+async def handle_language(update: Update, context):
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -75,10 +73,10 @@ def handle_language(update: Update, context):
          InlineKeyboardButton("Other", callback_data='sheet_other')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    query.message.reply_text("Choose sheet size:", reply_markup=reply_markup)
+    await query.message.reply_text("Choose sheet size:", reply_markup=reply_markup)
 
 # Handle sheet size selection and display color options
-def handle_sheet_size(update: Update, context):
+async def handle_sheet_size(update: Update, context):
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -93,10 +91,10 @@ def handle_sheet_size(update: Update, context):
          InlineKeyboardButton("Black", callback_data='color_black')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    query.message.reply_text("Choose ink color:", reply_markup=reply_markup)
+    await query.message.reply_text("Choose ink color:", reply_markup=reply_markup)
 
 # Handle color selection and send output
-def handle_color(update: Update, context):
+async def handle_color(update: Update, context):
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -118,16 +116,16 @@ def handle_color(update: Update, context):
               f"Sheet: {sheet}\n"
               f"Color: {color}\n")
 
-    query.message.reply_text(output)
+    await query.message.reply_text(output)
 
-# Register callback query handlers
-dispatcher.add_handler(CommandHandler('start', start))
-dispatcher.add_handler(CallbackQueryHandler(handle_language, pattern='^language_'))
-dispatcher.add_handler(CallbackQueryHandler(handle_sheet_size, pattern='^sheet_'))
-dispatcher.add_handler(CallbackQueryHandler(handle_color, pattern='^color_'))
+# Register handlers
+application.add_handler(CommandHandler('start', start))
+application.add_handler(CallbackQueryHandler(handle_language, pattern='^language_'))
+application.add_handler(CallbackQueryHandler(handle_sheet_size, pattern='^sheet_'))
+application.add_handler(CallbackQueryHandler(handle_color, pattern='^color_'))
 
 # Start the Pyrogram app
 app.run()
 
 # Start the Telegram bot
-updater.start_polling()
+application.run_polling()

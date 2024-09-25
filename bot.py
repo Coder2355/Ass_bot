@@ -74,7 +74,7 @@ async def font_selected(client, callback_query):
         await process_assignment(client, callback_query.message, user_id)
 
 # Handler for uploaded font file
-@app.on_message(filters.document & filters.user(user_data.keys()))
+@app.on_message(filters.document & filters.user(list(user_data.keys())))
 async def receive_handwriting(client, message):
     user_id = message.from_user.id
     file = message.document

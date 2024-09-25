@@ -23,7 +23,7 @@ async def start(update: Update, context):
     await update.message.reply_text(Config.START_MESSAGE)
 
 # Analyze handwriting from photo
-@app.on_message(filters.photo)
+@app.on_message(filters._Photo)
 async def analyze_handwriting(client, message):
     # Notify the user that their request is being processed
     await message.reply_text(Config.STATUS_MESSAGE)
@@ -43,7 +43,7 @@ async def analyze_handwriting(client, message):
     await message.reply_text("I've analyzed your handwriting. Now please send the paragraph you'd like to format.")
 
 # Handle paragraph and display language options
-@app.on_message(filters.text)
+@app.on_message(filters.Text)
 async def handle_paragraph(client, message):
     user_id = message.from_user.id
     if user_id in user_data:
